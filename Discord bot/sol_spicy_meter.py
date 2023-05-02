@@ -44,7 +44,7 @@ def load_user_xp():
     try:
         with open('user_xp.json', 'r') as f:
             loaded_data = json.load(f)
-            return {str(key): value for key, value in loaded_data.items()}
+            return {(str(server_id), str(user_id)): value for server_id, user_id, value in loaded_data}
     except FileNotFoundError:
         return {}
 
@@ -60,34 +60,34 @@ def load_reached_milestones():
     try:
         with open('reached_milestones.json', 'r') as f:
             loaded_data = json.load(f)
-            return {(int(user_id), int(milestone)) for user_id, milestone in loaded_data}
+            return {(str(server_id), int(user_id), int(milestone)) for server_id, user_id, milestone in loaded_data}
     except FileNotFoundError:
         return set()
 
 
-async def check_milestone(user_id, message):
+async def check_milestone(user_id, server_id, message):
     """Check if a user has reached a milestone and send a message if they have."""
-    user_id = str(user_id)
-    user_current_sp = user_xp[user_id]
+    user_key = (str(server_id), str(user_id))
+    user_current_sp = user_xp[user_key]
     for milestone, milestone_message in milestone_messages.items():
-        if user_current_sp >= milestone and (user_id, milestone) not in reached_milestones:
-            reached_milestones.add((user_id, milestone))
+        if user_current_sp >= milestone and (server_id, user_id, milestone) not in reached_milestones:
+            reached_milestones.add((server_id, user_id, milestone))
             save_reached_milestones()
             await send_milestone_message(message, milestone_message)
 
 
-async def award_xp(user_id, excitement_score, message):
+async def award_xp(user_id, server_id, excitement_score, message):
     """Award XP to a user and check if they've reached a milestone."""
-    user_id = str(user_id)
+    user_key = (str(server_id), str(user_id))
     xp_to_award = int(round(excitement_score) * 10)
-    if user_id in user_xp:
-        user_xp[user_id] += xp_to_award
+    if user_key in user_xp:
+        user_xp[user_key] += xp_to_award
     else:
-        user_xp[user_id] = xp_to_award
-    logger.info(f"Awarded {xp_to_award} SP to user {user_id}. Total SP: {user_xp[user_id]}")
+        user_xp[user_key] = xp_to_award
+    logger.info(f"Awarded {xp_to_award} SP to user {user_id} in server {server_id}. Total SP: {user_xp[user_key]}")
     save_user_xp()
 
-    await check_milestone(user_id, message)
+    await check_milestone(user_id, server_id, message)
 
 
 async def send_milestone_message(message, milestone_message):
@@ -95,12 +95,12 @@ async def send_milestone_message(message, milestone_message):
     await message.channel.send(f"{message.author.mention}, {milestone_message}")
 
 
-def can_award_xp(user_id):
+def can_award_xp(user_id, server_id):
     """Check if a user can be awarded XP based on the cooldown."""
-    user_id = str(user_id)
+    user_key = (str(server_id), str(user_id))
     current_time = time.time()
-    if user_id not in user_cooldowns or current_time - user_cooldowns[user_id] >= cooldown_time:
-        user_cooldowns[user_id] = current_time
+    if user_key not in user_cooldowns or current_time - user_cooldowns[user_key] >= cooldown_time:
+        user_cooldowns[user_key] = current_time
         return True
     return False
 
@@ -166,10 +166,12 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
+    server_id = str(message.guild.id)
+    user_id = message.author.id
     excitement_result, excitement_score = is_spicy_content(message.content)
-    if excitement_result == 'NSFW' and excitement_score > 0.93 and can_award_xp(message.author.id):
+    if excitement_result == 'NSFW' and excitement_score > 0.93 and can_award_xp(user_id, server_id):
         logger.info(f"Spicy content detected: {message.content}")
-        award_xp(message.author.id, excitement_score, message)
+        await award_xp(user_id, server_id, excitement_score, message)
 
     await bot.process_commands(message)
 
