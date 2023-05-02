@@ -26,7 +26,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-def is_spciy_content(message):
+def is_spicy_content(message):
     """Classify message as NSFW or not and return the result and score."""
     result = classifier(message)
     logger.info(f"Output: {result}")
@@ -166,7 +166,7 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    excitement_result, excitement_score = is_spciy_content(message.content)
+    excitement_result, excitement_score = is_spicy_content(message.content)
     if excitement_result == 'NSFW' and excitement_score > 0.93 and can_award_xp(message.author.id):
         logger.info(f"Spicy content detected: {message.content}")
         award_xp(message.author.id, excitement_score, message)
