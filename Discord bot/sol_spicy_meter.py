@@ -5,6 +5,7 @@ import json
 from discord.ext import commands
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 
+# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s:%(levelname)s:[%(name)s]: %(message)s',
@@ -15,26 +16,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize the tokenizer and model for the text classifier
 tokenizer = AutoTokenizer.from_pretrained('michellejieli/NSFW_text_classifier')
 model = AutoModelForSequenceClassification.from_pretrained('michellejieli/NSFW_text_classifier')
 classifier = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
 
+# Create a bot instance with the given command prefix and intents
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 def is_spciy_content(message):
+    """Classify message as NSFW or not and return the result and score."""
     result = classifier(message)
     logger.info(f"Output: {result}")
     return result[0]['label'], result[0]['score']
 
 
 def save_user_xp():
+    """Save user XP to a JSON file."""
     with open('user_xp.json', 'w') as f:
         json.dump(user_xp, f)
 
 
 def load_user_xp():
+    """Load user XP from a JSON file."""
     try:
         with open('user_xp.json', 'r') as f:
             loaded_data = json.load(f)
@@ -44,11 +50,13 @@ def load_user_xp():
 
 
 def save_reached_milestones():
+    """Save reached milestones to a JSON file."""
     with open('reached_milestones.json', 'w') as f:
         json.dump(list(reached_milestones), f)
 
 
 def load_reached_milestones():
+    """Load reached milestones from a JSON file."""
     try:
         with open('reached_milestones.json', 'r') as f:
             loaded_data = json.load(f)
@@ -58,6 +66,7 @@ def load_reached_milestones():
 
 
 async def check_milestone(user_id, message):
+    """Check if a user has reached a milestone and send a message if they have."""
     user_id = str(user_id)
     user_current_sp = user_xp[user_id]
     for milestone, milestone_message in milestone_messages.items():
@@ -68,6 +77,7 @@ async def check_milestone(user_id, message):
 
 
 async def award_xp(user_id, excitement_score, message):
+    """Award XP to a user and check if they've reached a milestone."""
     user_id = str(user_id)
     xp_to_award = int(round(excitement_score) * 10)
     if user_id in user_xp:
@@ -81,10 +91,12 @@ async def award_xp(user_id, excitement_score, message):
 
 
 async def send_milestone_message(message, milestone_message):
+    """Send a message to the channel announcing that the     user reached a milestone."""
     await message.channel.send(f"{message.author.mention}, {milestone_message}")
 
 
 def can_award_xp(user_id):
+    """Check if a user can be awarded XP based on the cooldown."""
     user_id = str(user_id)
     current_time = time.time()
     if user_id not in user_cooldowns or current_time - user_cooldowns[user_id] >= cooldown_time:
@@ -94,12 +106,14 @@ def can_award_xp(user_id):
 
 
 def load_token():
+    """Load the bot token from a file."""
     with open('token.txt', 'r') as f:
         return f.read().strip()
 
 
-@bot.command(name='spiceboards', help='Display the top N users by Spicy Points ((SP).')
+@bot.command(name='spiceboards', help='Display the top N users by Spicy Points (SP).')
 async def leaderboard(ctx, top_n: int = 10):
+    """Show the leaderboard of top N users with the most Spicy Points."""
     user_xp = load_user_xp()
     sorted_xp = sorted(user_xp.items(), key=lambda x: x[1], reverse=True)
     leaderboard_embed = discord.Embed(
@@ -115,6 +129,7 @@ async def leaderboard(ctx, top_n: int = 10):
 
 @bot.command(name='spice', help='Get your current SP.')
 async def spice(ctx):
+    """Show the user's current Spicy Points."""
     user_xp = load_user_xp()
     user_id = str(ctx.message.author.id)
     if user_id in user_xp:
@@ -125,6 +140,7 @@ async def spice(ctx):
 
 @bot.event
 async def on_command_error(ctx, error):
+    """Handle command errors."""
     if isinstance(error, commands.CommandNotFound):
         await ctx.send(f"{ctx.author.mention}, the command '{ctx.message.content}' was not found. Please check !help and try again.")
     else:
@@ -133,11 +149,13 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_ready():
+    """Log when the bot is connected to Discord."""
     logger.info(f'{bot.user.name} has connected to Discord!')
 
 
 @bot.event
 async def on_message(message):
+    """Handle incoming messages, checking for NSFW content and awarding XP."""
     logger.info(f'Message: {message.content}')
     if message.author == bot.user:
         return
@@ -150,6 +168,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
+# Load data and set up variables
 user_xp = load_user_xp()
 milestones = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000]
 milestone_messages = {
@@ -171,5 +190,6 @@ reached_milestones = load_reached_milestones()
 user_cooldowns = {}
 cooldown_time = 60  # Cooldown time in seconds
 
+# Load the bot token and start the bot
 TOKEN = load_token()
 bot.run(TOKEN)
