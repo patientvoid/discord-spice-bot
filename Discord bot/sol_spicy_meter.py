@@ -127,15 +127,21 @@ async def leaderboard(ctx, top_n: int = 10):
     await ctx.send(embed=leaderboard_embed)
 
 
-@bot.command(name='spice', help='Get your current SP.')
-async def spice(ctx):
+@bot.command(name='spice', help='Get your current SP or the SP of a mentioned user.')
+async def spice(ctx, member: discord.Member = None):
     """Show the user's current Spicy Points."""
     user_xp = load_user_xp()
-    user_id = str(ctx.message.author.id)
-    if user_id in user_xp:
-        await ctx.send(f"{ctx.message.author.mention}, you currently have {user_xp[user_id]} Spice points (SP).")
+    if member:
+        user_id = str(member.id)
+        user_mention = member.mention
     else:
-        await ctx.send(f"{ctx.message.author.mention}, you don't have any SP yet.")
+        user_id = str(ctx.message.author.id)
+        user_mention = ctx.message.author.mention
+
+    if user_id in user_xp:
+        await ctx.send(f"{user_mention}, you currently have {user_xp[user_id]} Spice points (SP).")
+    else:
+        await ctx.send(f"{user_mention}, you don't have any SP yet.")
 
 
 @bot.event
