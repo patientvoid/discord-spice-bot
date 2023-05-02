@@ -5,8 +5,14 @@ import json
 from discord.ext import commands
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler('bot.log', encoding='utf-8')])
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s:%(levelname)s:[%(name)s]: %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot.log', encoding='utf-8')
+    ]
+)
 logger = logging.getLogger(__name__)
 
 tokenizer = AutoTokenizer.from_pretrained('michellejieli/NSFW_text_classifier')
@@ -52,7 +58,7 @@ def load_reached_milestones():
 
 
 async def check_milestone(user_id, message):
-    user_id = str(user_id)  # Ensure user_id is always a string
+    user_id = str(user_id)
     user_current_sp = user_xp[user_id]
     for milestone, milestone_message in milestone_messages.items():
         if user_current_sp >= milestone and (user_id, milestone) not in reached_milestones:
@@ -60,9 +66,10 @@ async def check_milestone(user_id, message):
             save_reached_milestones()
             await send_milestone_message(message, milestone_message)
 
+
 async def award_xp(user_id, excitement_score, message):
-    user_id = str(user_id)  # Ensure user_id is always a string
-    xp_to_award = int(round(excitement_score) * 10)  # You can adjust the multiplier as needed
+    user_id = str(user_id)
+    xp_to_award = int(round(excitement_score) * 10)
     if user_id in user_xp:
         user_xp[user_id] += xp_to_award
     else:
@@ -78,7 +85,7 @@ async def send_milestone_message(message, milestone_message):
 
 
 def can_award_xp(user_id):
-    user_id = str(user_id)  # Ensure user_id is always a string
+    user_id = str(user_id)
     current_time = time.time()
     if user_id not in user_cooldowns or current_time - user_cooldowns[user_id] >= cooldown_time:
         user_cooldowns[user_id] = current_time
@@ -91,15 +98,20 @@ def load_token():
         return f.read().strip()
 
 
-@bot.command(name='spiceboards', help='Display the top N users by Spicy Points (SP).')
+@bot.command(name='spiceboards', help='Display the top N users by Spicy Points ((SP).')
 async def leaderboard(ctx, top_n: int = 10):
     user_xp = load_user_xp()
     sorted_xp = sorted(user_xp.items(), key=lambda x: x[1], reverse=True)
-    leaderboard_embed = discord.Embed(title='Leaderboard', description=f'Top {top_n} users by Spicy Points (SP):', color=0x00ff00)
+    leaderboard_embed = discord.Embed(
+        title='Leaderboard',
+        description=f'Top {top_n} users by Spicy Points (SP):',
+        color=0x00ff00
+    )
     for i, (user_id, xp) in enumerate(sorted_xp[:top_n], start=1):
         user = await bot.fetch_user(user_id)
         leaderboard_embed.add_field(name=f"{i}. {user.name}", value=f"{xp} SP", inline=False)
     await ctx.send(embed=leaderboard_embed)
+
 
 @bot.command(name='spice', help='Get your current SP.')
 async def spice(ctx):
@@ -110,6 +122,7 @@ async def spice(ctx):
     else:
         await ctx.send(f"{ctx.message.author.mention}, you don't have any SP yet.")
 
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
@@ -117,9 +130,11 @@ async def on_command_error(ctx, error):
     else:
         raise error
 
+
 @bot.event
 async def on_ready():
     logger.info(f'{bot.user.name} has connected to Discord!')
+
 
 @bot.event
 async def on_message(message):
@@ -131,7 +146,6 @@ async def on_message(message):
     if excitement_result == 'NSFW' and excitement_score > 0.93 and can_award_xp(message.author.id):
         logger.info(f"Spicy content detected: {message.content}")
         award_xp(message.author.id, excitement_score, message)
-        # await message.channel.send(f"{message.author.mention}, that's some spicy content! You've been awarded {int(excitement_score * 100)} SP!")
 
     await bot.process_commands(message)
 
