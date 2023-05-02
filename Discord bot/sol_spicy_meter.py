@@ -2,9 +2,19 @@ import logging
 import discord
 import time
 import json
-import asyncio
 from discord.ext import commands
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler('bot.log', encoding='utf-8')])
+logger = logging.getLogger(__name__)
+
+tokenizer = AutoTokenizer.from_pretrained('michellejieli/NSFW_text_classifier')
+model = AutoModelForSequenceClassification.from_pretrained('michellejieli/NSFW_text_classifier')
+classifier = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
+
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 def is_spciy_content(message):
@@ -124,17 +134,6 @@ async def on_message(message):
         # await message.channel.send(f"{message.author.mention}, that's some spicy content! You've been awarded {int(excitement_score * 100)} SP!")
 
     await bot.process_commands(message)
-
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler('bot.log', encoding='utf-8')])
-logger = logging.getLogger(__name__)
-
-tokenizer = AutoTokenizer.from_pretrained('michellejieli/NSFW_text_classifier')
-model = AutoModelForSequenceClassification.from_pretrained('michellejieli/NSFW_text_classifier')
-classifier = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
-
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 user_xp = load_user_xp()
