@@ -39,7 +39,7 @@ def is_spicy_content(message):
 def save_user_xp():
     """Save user XP to a JSON file."""
     with open('user_xp.json', 'w') as f:
-        json.dump(user_xp, f)
+        json.dump({str(key): value for key, value in user_xp.items()}, f)
 
 
 def load_user_xp():
@@ -48,8 +48,8 @@ def load_user_xp():
         with open('user_xp.json', 'r') as f:
             loaded_data = json.load(f)
             return {
-                (str(server_id), str(user_id)): value
-                for server_id, user_id, value in loaded_data}
+                tuple(map(str, key.strip('()').split(', '))): value
+                for key, value in loaded_data.items()}
     except FileNotFoundError:
         return {}
 
