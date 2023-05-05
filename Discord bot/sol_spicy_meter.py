@@ -131,10 +131,15 @@ def load_token():
         name='spiceboards', help=('Display the top N users '
                                   'by Spicy Points (SP) in this server.'))
 async def leaderboard(ctx, top_n: int = 10):
-    """Show the leaderboard of top N users with the most Spicy Points in this server."""
+    """
+    Show the leaderboard of top N users with the most Spicy
+    Points in this server.
+    """
     server_id = str(ctx.guild.id)
     server_user_xp = {k: v for k, v in user_xp.items() if k[0] == server_id}
-    sorted_xp = sorted(server_user_xp.items(), key=lambda x: x[1], reverse=True)
+    sorted_xp = sorted(
+        server_user_xp.items(), key=lambda x: x[1], reverse=True
+        )
     leaderboard_embed = discord.Embed(
         title='Leaderboard',
         description=f'Top {top_n} users by Spicy Points (SP) in this server:',
@@ -166,7 +171,6 @@ async def spice(ctx, member: discord.Member = None):
             "Spice points (SP).")
     else:
         await ctx.send(f"{user_mention}, you don't have any SP yet.")
-
 
 
 @bot.event
