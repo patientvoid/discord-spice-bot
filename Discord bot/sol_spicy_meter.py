@@ -94,8 +94,8 @@ async def award_xp(user_id, server_id, excitement_score, message):
         user_xp[user_key] += xp_to_award
     else:
         user_xp[user_key] = xp_to_award
-    logger.info(f"Awarded {xp_to_award} SP to user {user_id} in server ' \
-                '{server_id}. Total SP: {user_xp[user_key]}")
+    logger.info(f"Awarded {xp_to_award} SP to user {user_id} in server "
+                f"{server_id}. Total SP: {user_xp[user_key]}")
     save_user_xp()
 
     await check_milestone(user_id, server_id, message)
@@ -129,18 +129,19 @@ def load_token():
 
 @bot.command(
         name='spiceboards', help=('Display the top N users '
-                                  'by Spicy Points (SP).'))
+                                  'by Spicy Points (SP) in this server.'))
 async def leaderboard(ctx, top_n: int = 10):
-    """Show the leaderboard of top N users with the most Spicy Points."""
-    user_xp = load_user_xp()
-    sorted_xp = sorted(user_xp.items(), key=lambda x: x[1], reverse=True)
+    """Show the leaderboard of top N users with the most Spicy Points in this server."""
+    server_id = str(ctx.guild.id)
+    server_user_xp = {k: v for k, v in user_xp.items() if k[0] == server_id}
+    sorted_xp = sorted(server_user_xp.items(), key=lambda x: x[1], reverse=True)
     leaderboard_embed = discord.Embed(
         title='Leaderboard',
-        description=f'Top {top_n} users by Spicy Points (SP):',
+        description=f'Top {top_n} users by Spicy Points (SP) in this server:',
         color=0x00ff00
     )
-    for i, (user_id, xp) in enumerate(sorted_xp[:top_n], start=1):
-        user = await bot.fetch_user(user_id)
+    for i, ((_, user_id), xp) in enumerate(sorted_xp[:top_n], start=1):
+        user = await bot.fetch_user(int(user_id))
         leaderboard_embed.add_field(
             name=f"{i}. {user.name}", value=f"{xp} SP", inline=False)
     await ctx.send(embed=leaderboard_embed)
@@ -150,7 +151,7 @@ async def leaderboard(ctx, top_n: int = 10):
                                  'a mentioned user.'))
 async def spice(ctx, member: discord.Member = None):
     """Show the user's current Spicy Points."""
-    user_xp = load_user_xp()
+    server_id = str(ctx.guild.id)
     if member:
         user_id = str(member.id)
         user_mention = member.mention
@@ -158,12 +159,14 @@ async def spice(ctx, member: discord.Member = None):
         user_id = str(ctx.message.author.id)
         user_mention = ctx.message.author.mention
 
-    if user_id in user_xp:
+    user_key = (server_id, user_id)
+    if user_key in user_xp:
         await ctx.send(
-            f"{user_mention}, you currently have {user_xp[user_id]} "
+            f"{user_mention}, you currently have {user_xp[user_key]} "
             "Spice points (SP).")
     else:
         await ctx.send(f"{user_mention}, you don't have any SP yet.")
+
 
 
 @bot.event
